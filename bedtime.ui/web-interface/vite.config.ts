@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/infer': {
-        target: 'http://localhost:8081',
+        target: 'http://34.71.209.167:6000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/infer/, '/infer'),
       },
