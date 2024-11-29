@@ -1,3 +1,4 @@
+// src/App.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useSpring, animated } from '@react-spring/web';
 import { showToast, CustomToastContainer } from './components/CustomToast';
@@ -5,6 +6,7 @@ import DrawingCanvas, { DrawingCanvasHandle } from './components/DrawingCanvas';
 import gura from './assets/gura.png';
 import AudioPlayer from './components/AudioPlayer';
 import './App.css';
+import AudioRecorder from './components/AudioRecorder';
 
 // Define the type for imported images
 type ImageModule = {
@@ -22,7 +24,8 @@ const App: React.FC = () => {
   const canvasRef = useRef<DrawingCanvasHandle>(null);
   const [isDownloadable, setIsDownloadable] = useState(false);
   const [demoImages, setDemoImages] = useState<string[]>([]);
-  const [audioData, setAudioData] = useState<string | null>(null);
+  const [serverAudioData, setServerAudioData] = useState<string | null>(null);
+  const [recordedAudioData, setRecordedAudioData] = useState<string | null>(null); // Base64 audio from recorder
   const [isLoading, setIsLoading] = useState(false);
   const [messageIndex, setMessageIndex] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -41,6 +44,10 @@ const App: React.FC = () => {
     setTheme(newTheme);
   };
 
+  useEffect(() => {
+    document.title = "Bedtime AI";
+  }, []);
+  
   // Load demo images and apply theme classes
   useEffect(() => {
     const images = importAllImages();
@@ -99,6 +106,12 @@ const App: React.FC = () => {
     }
   }, [isLoading, messages.length]);
 
+  // Handler to receive base64 audio data from AudioRecorder
+  const handleAudioRecordingComplete = (base64Audio: string) => {
+    setRecordedAudioData(base64Audio);
+    showToast({ message: 'Audio recording completed!', theme });
+  };
+
   // Handle form submission to generate the story
   const handleSubmit = async () => {
     const canvasData = canvasRef.current?.getBase64FromCanvas();
@@ -109,20 +122,27 @@ const App: React.FC = () => {
       setProgress(0);
 
       try {
+        const requestBody: { image_base64: string; audio_base64?: string } = {
+          image_base64: canvasData,
+        };
+
+        // Include audio data if available
+        if (recordedAudioData) {
+          requestBody.audio_base64 = recordedAudioData;
+        }
+
         const response = await fetch('/infer/sketchclassify', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            image_base64: canvasData,
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         if (response.ok) {
           const result = await response.json();
           if (result.audio) {
-            setAudioData(result.audio);
+            setServerAudioData(result.audio);
           } else {
             showToast({ message: 'No audio returned from server.', theme });
           }
@@ -205,6 +225,9 @@ const App: React.FC = () => {
           </button>
         </div>
 
+        {/* Pass the handler to AudioRecorder */}
+        <AudioRecorder onRecordingComplete={handleAudioRecordingComplete} />
+
         <div className="audio-player-section">
           {isLoading ? (
             <div className="loader">
@@ -216,10 +239,10 @@ const App: React.FC = () => {
               </div>
               <p>{messages[messageIndex]}</p>
             </div>
-          ) : audioData ? (
+          ) : serverAudioData ? (
             <>
               <h2>Generated Story</h2>
-              <AudioPlayer theme={theme} audioData={audioData} />
+              <AudioPlayer theme={theme} audioData={serverAudioData} />
             </>
           ) : null}
         </div>
