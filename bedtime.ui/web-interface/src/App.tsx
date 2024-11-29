@@ -6,7 +6,6 @@ import DrawingCanvas, { DrawingCanvasHandle } from './components/DrawingCanvas';
 import gura from './assets/gura.png';
 import AudioPlayer from './components/AudioPlayer';
 import './App.css';
-import AudioRecorder from './components/AudioRecorder';
 
 // Define the type for imported images
 type ImageModule = {
@@ -106,12 +105,7 @@ const App: React.FC = () => {
     }
   }, [isLoading, messages.length]);
 
-  // Handler to receive base64 audio data from AudioRecorder
-  const handleAudioRecordingComplete = (base64Audio: string) => {
-    setRecordedAudioData(base64Audio);
-    showToast({ message: 'Audio recording completed!', theme });
-  };
-
+  
   // Handle form submission to generate the story
   const handleSubmit = async () => {
     const canvasData = canvasRef.current?.getBase64FromCanvas();
@@ -225,9 +219,7 @@ const App: React.FC = () => {
           </button>
         </div>
 
-        {/* Pass the handler to AudioRecorder */}
-        <AudioRecorder onRecordingComplete={handleAudioRecordingComplete} />
-
+    
         <div className="audio-player-section">
           {isLoading ? (
             <div className="loader">
